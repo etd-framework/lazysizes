@@ -1,0 +1,12 @@
+{
+  "name": "etdsolutions/lazysizes",
+  "description": "Shim repository for laySizes",
+  "homepage": "https://afarkas.github.io/lazysizes",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Alexander Farkas",
+      "email": "info@corrupt-system.de"
+    }
+  ]
+}
