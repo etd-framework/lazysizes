@@ -16,7 +16,7 @@
 	var anchor = document.createElement('a');
 	var img = document.createElement('img');
 	var buggySizes = ('srcset' in img) && !('sizes' in img);
-	var supportPicture = !!window.HTMLPictureElement && ('sizes' in document.createElement('img'));
+	var supportPicture = !!window.HTMLPictureElement && !buggySizes;
 
 	(function(){
 		var prop;
@@ -74,6 +74,7 @@
 
 	function getElementOptions(elem, src){
 		var attr, parent, setOption, options;
+		var elemStyles = window.getComputedStyle(elem);
 
 
 		parent = elem.parentNode;
@@ -84,7 +85,18 @@
 		setOption = function(attr, run){
 			var attrVal = elem.getAttribute('data-'+ attr);
 
-			if(attrVal != null){
+			if (!attrVal) {
+				// no data- attr, get value from the CSS
+				var styles = elemStyles.getPropertyValue('--ls-' + attr);
+				// at least Safari 9 returns null rather than
+				// an empty string for getPropertyValue causing
+				// .trim() to fail
+				if (styles) {
+					attrVal = styles.trim();
+				}
+			}
+
+			if (attrVal) {
 				if(attrVal == 'true'){
 					attrVal = true;
 				} else if(attrVal == 'false'){
@@ -197,11 +209,11 @@
 		return elem.getAttribute( elem.getAttribute('data-srcattr') || riasCfg.srcAttr ) || elem.getAttribute(config.srcsetAttr) || elem.getAttribute(config.srcAttr) || elem.getAttribute('data-pfsrcset') || '';
 	}
 
-	addEventListener('lazybeforeunveil', function(e){
+	addEventListener('lazybeforesizes', function(e){
 		var elem, src, elemOpts, parent, sources, i, len, sourceSrc, sizes, detail, hasPlaceholder, modified, emptyList;
 		elem = e.target;
 
-		if(e.defaultPrevented || riasCfg.disabled || !((sizes = elem.getAttribute(config.sizesAttr) || elem.getAttribute('sizes')) && regAllowedSizes.test(sizes))){return;}
+		if(!e.detail.dataAttr || e.defaultPrevented || riasCfg.disabled || !((sizes = elem.getAttribute(config.sizesAttr) || elem.getAttribute('sizes')) && regAllowedSizes.test(sizes))){return;}
 
 		src = getSrc(elem);
 
@@ -241,12 +253,11 @@
 				};
 				polyfill({
 					target: elem,
-					detail: detail,
-					details: detail
+					detail: detail
 				});
 			}
 		}
-	});
+	}, true);
 	// partial polyfill
 	var polyfill = (function(){
 		var ascendingSort = function( a, b ) {
@@ -343,13 +354,15 @@
 			if(candidate && candidate.u && elem._lazyrias.cur != candidate.u){
 				elem._lazyrias.cur = candidate.u;
 				candidate.cached = true;
-				elem.setAttribute(config.srcAttr, candidate.u);
-				elem.setAttribute('src', candidate.u);
+				lazySizes.rAF(function(){
+					elem.setAttribute(config.srcAttr, candidate.u);
+					elem.setAttribute('src', candidate.u);
+				});
 			}
 		};
 
 		if(!supportPicture){
-			document.addEventListener('lazybeforesizes', polyfill);
+			addEventListener('lazybeforesizes', polyfill);
 		} else {
 			polyfill = function(){};
 		}
